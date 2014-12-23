@@ -1,4 +1,7 @@
+import math
+import pandas as pd
 from scipy.signal import butter, lfilter
+
 
 class WaveAnalysis:
     def __init__(self, input_data = None):
@@ -44,18 +47,17 @@ class WaveAnalysis:
         print 'Sample Rate is ', sample_frequency
         return results, self.sample_rate
 
-'''
-#http://phrogz.net/js/framerate-independent-low-pass-filter.html
-#high pass filter
-k = math.exp(1-(m_cutoffFrequency * 2 * 3.1415)/SAMPLERATE) #used for highpass filter
-new_results = []
-for i in range(0, len(results)):
-    if len(new_results) > 0:
-        new_results.append(new_results[i-1] + results[i] + results[i-1])
-    else:
-        new_results.append(results[i])
-
-'''
+    def high_pass_filter(self, data):
+        #http://phrogz.net/js/framerate-independent-low-pass-filter.html
+        k = math.exp(1-(self.cutoffFrequency*2*3.1415)/self.sample_rate)
+        new_data = []
+        print "Sample Rate = %i, Cutoff F = %i, k = %2f" %(self.sample_rate, self.cutoffFrequency, k)
+        for i in range(0, len(data)):
+            if len(new_data) > 0:
+                new_data.append(k*new_data[i-1] + data[i] + data[i-1])
+            else:
+                new_data.append(data[i])
+        return new_data
 
 class Statistics:
     def __init__(self, input_array = None):

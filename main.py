@@ -23,6 +23,7 @@ def create_file_name_from_now(suffix='png'):
 def normalize_array(input_array):
     array = []
     N_group = 100 #On iphone, roughly equal to 137
+    cut_off_bin = 60 #avoid the initial noise
     N_samples = len(input_array)
     MAX = float(np.amax(input_array))
     print "Use MAX value = %i to normalize." %MAX
@@ -32,29 +33,27 @@ def normalize_array(input_array):
         if value > new_MAX:
             new_MAX = value 
         array.append(value)
-    return np.array(array), new_MAX
+    return np.array(array[cut_off_bin:]), new_MAX
 
 def main():
 
     parser = argparse.ArgumentParser(description='Post ibs info to Launchpad.')
     parser.add_argument('-e', '--export', action="store_const", const=True ,
             default=False, help='Export PNG file (defailt: False)')
-    parser.add_argument('-t','--title',
+    parser.add_argument('-t','--title', 
             default="Wave Display", help='Title of the figure (default: "Wave Display")')
-    parser.add_argument('-f','--filter',
+    parser.add_argument('-f','--filter', 
             default="HPF", help='Filter to be used: HPF. (default: HPF)')
     parser.add_argument('-o','--exportloc',
             default="/tmp", help='Location to export image (default: /tmp)')
     parser.add_argument('-l', '--logy', action="store_const", const=True ,
             default=False, help='Set log scale for y axis (defailt: False)')
-    parser.add_argument('-r','--rows',
+    parser.add_argument('-p','--legpos', type=int,
+            default=0, help='Position of legend (default: 0)')
+    parser.add_argument('-r','--rows', type=int,
             default=3, help='Number of rows (default: 3)')
 
     args = parser.parse_args()
-
-    IS_EXPORT = args.export
-    FIG_LOC = args.exportloc
-    FIG_TITLE= args.title
     N_ROW = args.rows
 
     wave_files = list_files()
@@ -63,32 +62,38 @@ def main():
 
     EXPORT_NAME = create_file_name_from_now()
     plt.close('all')
-    fig = plt.figure()
-    plt.title(FIG_TITLE)
+    plt.title(args.title)
     fig, axes = plt.subplots(nrows=N_ROW, ncols=N_COL)
+
     for i in range(0, _N_total):
         FILENAME = join(ROOT_LOC, wave_files[i])
         results, SAMPLERATE = wa.open_wav_audiolab(FILENAME)
         #results, SAMPLERATE = wa.open_wav_wave(FILENAME)
         #results = np.fromfile(open(FILENAME),np.int16)[24:]
+
         results = abs(results)
         normalized_array, max_value = normalize_array(results)
-        kw = {'ax': axes[i/N_ROW, i%N_ROW]}
-        if args.logy:
-            kw['logy'] = True
-        d = {'Raw': normalized_array}
+        d = {'Raw Data': normalized_array}
         if args.filter == 'HPF':
             high_pass_data = wa.high_pass_filter(results)
             normalized_high_pass, max_2 = normalize_array(high_pass_data)
             d['High Pass'] = normalized_high_pass
+
+        kw = {'ax': axes[i/N_ROW, i%N_ROW], 'legend': False}
+        if i == args.legpos:
+            kw['legend'] = True
+        if args.logy:
+            kw['logy'] = True
+        else:
+            axes[i/N_ROW, i%N_ROW].set_ylim([0, max_value*1.05])
         df = pd.DataFrame(d)
         df.plot(**kw)
         axes[i/N_ROW, i%N_ROW].set_title(wave_files[i])
-        axes[i/N_ROW, i%N_ROW].
-    #plt.tight_layout()
 
-    if IS_EXPORT:
-        fullpath = FIG_LOC + '/' + EXPORT_NAME
+    plt.tight_layout()
+
+    if args.export:
+        fullpath = args.exportloc + '/' + EXPORT_NAME
         plt.savefig(fullpath)
         print "Image is saved to %s" %fullpath
     else:
