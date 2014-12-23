@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import pandas as pd
 from scipy.signal import butter, lfilter
 
@@ -44,12 +45,12 @@ class WaveAnalysis:
             waveData = waveFile.readframes(1)
             data = struct.unpack("<h", waveData)
             results.append(int(data[0]))
-        print 'Sample Rate is ', sample_frequency
-        return results, self.sample_rate
+        print 'Sample Rate is ', self.sample_rate
+        return np.array(results), self.sample_rate
 
     def high_pass_filter(self, data):
         #http://phrogz.net/js/framerate-independent-low-pass-filter.html
-        k = math.exp(1-(self.cutoffFrequency*2*3.1415)/self.sample_rate)
+        k = math.exp(-(self.cutoffFrequency*2*3.1415)/self.sample_rate)
         new_data = []
         print "Sample Rate = %i, Cutoff F = %i, k = %2f" %(self.sample_rate, self.cutoffFrequency, k)
         for i in range(0, len(data)):
